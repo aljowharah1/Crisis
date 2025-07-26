@@ -134,9 +134,21 @@ void autonomous() {
   You can do cool curved motions, but you have to give your robot the best chance
   to be consistent
   */
-// drive_example();
-// turn_example();
-infinity_path_example();
+//  drive_example();
+//  turn_example();
+//  drive_and_turn();
+//  wait_until_change_speed();
+//  swing_example();
+//  motion_chaining();
+//  combining_movements();
+//  interfered_example();
+//  odom_drive_example();
+//  odom_pure_pursuit_example();
+//  odom_pure_pursuit_wait_until_example();
+//  odom_boomerang_example();
+//  odom_boomerang_injected_pure_pursuit_example();
+//  measure_offsets();
+//  infinity_path_example();
   // ez::as::auton_selector.selected_auton_call();  // Calls selected auton from autonomous selector
 }
 

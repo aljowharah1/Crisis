@@ -61,11 +61,12 @@ void drive_example() {
   // for slew, only enable it when the drive distance is greater than the slew distance + a few inches
   // chassis.pid_heading_constants_set(0.0, 0.0, 0.0);  // Disables the correction
 
-  chassis.pid_drive_set(48_in, 127, false);
+  chassis.pid_drive_set(24_in, 127, false);
   chassis.pid_wait();
 
-  chassis.pid_drive_set(-48_in, 127);
+  chassis.pid_drive_set(-24_in, 127);
   chassis.pid_wait();
+
 
   // chassis.pid_drive_set(-12_in, DRIVE_SPEED);
   // chassis.pid_wait();
