@@ -1,4 +1,5 @@
 #include "main.h"
+#include "pros/gps.h"
 #include "subsystems.hpp"
 
 /////
@@ -17,9 +18,11 @@ const int SWING_SPEED = 127;
 void default_constants() {
   // P, I, D, and Start I
   // chassis.pid_drive_constants_set(20.0, 0.0, 100.0);         // Fwd/rev constants, used for odom and non odom motions
-   chassis.pid_drive_constants_set(10.0, 0.0, 0.0);         // Fwd/rev constants, used for odom and non odom motions
+  chassis.pid_drive_constants_set(12.0, 0.0, 5.0);         // Fwd/rev constants, used for odom and non odom motions
 
-  chassis.pid_heading_constants_set(11.0, 0.0, 20.0);        // Holds the robot straight while going forward without odom
+  // chassis.pid_heading_constants_set(11.0, 0.0, 20.0);        // Holds the robot straight while going forward without odom
+  chassis.pid_heading_constants_set(10.5, 0.0, 9.50);        // Holds the robot straight while going forward without odom
+
   chassis.pid_turn_constants_set(3.0, 0.05, 5.0, 15.0);     // Turn in place constants
   chassis.pid_swing_constants_set(6.0, 0.0, 65.0);           // Swing constants
   chassis.pid_odom_angular_constants_set(6.5, 0.0, 52.5);    // Angular control for odom motions
@@ -64,8 +67,8 @@ void drive_example() {
   chassis.pid_drive_set(24_in, 127, false);
   chassis.pid_wait();
 
-  chassis.pid_drive_set(-24_in, 127);
-  chassis.pid_wait();
+  // chassis.pid_drive_set(-24_in, 127);
+  // chassis.pid_wait();f
 
 
   // chassis.pid_drive_set(-12_in, DRIVE_SPEED);
@@ -147,13 +150,13 @@ void swing_example() {
   // The third parameter is the speed of the moving side of the drive
   // The fourth parameter is the speed of the still side of the drive, this allows for wider arcs
 
-  chassis.pid_swing_set(ez::LEFT_SWING, 45_deg, SWING_SPEED, 45);
+  chassis.pid_swing_set(ez::LEFT_SWING, 90_deg, SWING_SPEED, 45);
   chassis.pid_wait();
 
   chassis.pid_swing_set(ez::RIGHT_SWING, 0_deg, SWING_SPEED, 45);
   chassis.pid_wait();
 
-  chassis.pid_swing_set(ez::RIGHT_SWING, 45_deg, SWING_SPEED, 45);
+  chassis.pid_swing_set(ez::RIGHT_SWING, 90_deg, SWING_SPEED, 45);
   chassis.pid_wait();
 
   chassis.pid_swing_set(ez::LEFT_SWING, 0_deg, SWING_SPEED, 45);
@@ -166,7 +169,7 @@ void swing_example() {
 void motion_chaining() {
   // Motion chaining is where motions all try to blend together instead of individual movements.
   // This works by exiting while the robot is still moving a little bit.
-  // To use this, replace pid_wait with pid_wait_quick_chain.
+  // To use this, replace pid_wait with pid_wait_quick_chain.ظظظ
   chassis.pid_drive_set(24_in, DRIVE_SPEED, true);
   chassis.pid_wait();
 
@@ -188,20 +191,33 @@ void motion_chaining() {
 // Auto that tests everything
 ///
 void combining_movements() {
-  chassis.pid_drive_set(24_in, DRIVE_SPEED, true);
-  chassis.pid_wait();
+  // chassis.pid_drive_set(24_in, DRIVE_SPEED, true);
+  // chassis.pid_wait();
 
-  chassis.pid_turn_set(45_deg, TURN_SPEED);
-  chassis.pid_wait();
+  // chassis.pid_turn_set(45_deg, TURN_SPEED);
+  // chassis.pid_wait();
 
-  chassis.pid_swing_set(ez::RIGHT_SWING, -45_deg, SWING_SPEED, 45);
-  chassis.pid_wait();
+  // chassis.pid_swing_set(ez::RIGHT_SWING, -45_deg, SWING_SPEED, 45);
+  // chassis.pid_wait();
 
-  chassis.pid_turn_set(0_deg, TURN_SPEED);
-  chassis.pid_wait();
+  // chassis.pid_turn_set(0_deg, TURN_SPEED);
+  // chassis.pid_wait();
 
-  chassis.pid_drive_set(-24_in, DRIVE_SPEED, true);
-  chassis.pid_wait();
+  // chassis.pid_drive_set(-24_in, DRIVE_SPEED, true);
+  // chassis.pid_wait();
+    const double side_length = 24.0; // in inches
+   double turn_angle = 90.0;  // degrees (right turn)
+
+  for (int i = 0; i < 4; i++) {
+    // Drive forward one side of the square
+    chassis.pid_drive_set(side_length * 1_in, DRIVE_SPEED, true);
+    chassis.pid_wait();
+
+    // Turn 90 degrees clockwise
+    chassis.pid_turn_set(turn_angle * 1_deg , TURN_SPEED);
+    chassis.pid_wait();
+    turn_angle += 90;
+  }
 }
 
 ///
@@ -240,6 +256,9 @@ void interfered_example() {
 
   chassis.pid_turn_set(90_deg, TURN_SPEED);
   chassis.pid_wait();
+  chassis.pid_drive_set(24_in, DRIVE_SPEED, true);
+  chassis.pid_wait();
+
 }
 
 ///
@@ -253,11 +272,11 @@ void odom_drive_example() {
   chassis.pid_odom_set(24_in, DRIVE_SPEED, true);
   chassis.pid_wait();
 
-  chassis.pid_odom_set(-12_in, DRIVE_SPEED);
-  chassis.pid_wait();
+  // chassis.pid_odom_set(-12_in, DRIVE_SPEED);
+  // chassis.pid_wait();
 
-  chassis.pid_odom_set(-12_in, DRIVE_SPEED);
-  chassis.pid_wait();
+  // chassis.pid_odom_set(-12_in, DRIVE_SPEED);
+  // chassis.pid_wait();
 }
 
 ///
@@ -265,40 +284,55 @@ void odom_drive_example() {
 ///
 void odom_pure_pursuit_example() {
   // Drive to 0, 30 and pass through 6, 10 and 0, 20 on the way, with slew
-  chassis.pid_odom_set({{{6_in, 10_in}, fwd, DRIVE_SPEED},
-                        {{0_in, 20_in}, fwd, DRIVE_SPEED},
-                        {{0_in, 30_in}, fwd, DRIVE_SPEED}},
-                       true);
+  // chassis.pid_odom_set({{{0_in, 48_in}, fwd, DRIVE_SPEED},
+  //                       {{34_in, 34_in}, fwd, DRIVE_SPEED},
+  //                       {{0_in, 68_in}, fwd, DRIVE_SPEED}},
+  //                      true);
+  chassis.pid_odom_set({{{17_in, 17_in}, fwd, DRIVE_SPEED},
+                      {{34_in, 34_in}, fwd, DRIVE_SPEED},
+                      {{0_in, 68_in}, fwd, DRIVE_SPEED}},
+                     true);
+  // chassis.pid_wait();
+ chassis.pid_wait_until_index(2);  // Waits until the robot passes 12, 24
+  intake.move(127);  // Set your intake to start moving once it passes through the second point in the index
+  pros::delay(3000);    
+    // chassis.pid_wait();              // Wait until final point (0, 68) is reached
+  // Drive to 0, 0 backwards
+  // chassis.pid_odom_set({{0_in, 0_in}, rev, DRIVE_SPEED},
+  //                      true);
+  // chassis.pid_wait();
+    chassis.pid_odom_set({
+    {{10_in, 34_in}, rev, DRIVE_SPEED},  // Curve to the right
+    {{0_in, 0_in}, rev, DRIVE_SPEED}
+  }, true);
   chassis.pid_wait();
 
-  // Drive to 0, 0 backwards
-  chassis.pid_odom_set({{0_in, 0_in}, rev, DRIVE_SPEED},
-                       true);
-  chassis.pid_wait();
 }
 
 ///
 // Odom Pure Pursuit Wait Until
 ///
 void odom_pure_pursuit_wait_until_example() {
-  chassis.pid_odom_set({{{0_in, 24_in}, fwd, DRIVE_SPEED},
-                        {{12_in, 24_in}, fwd, DRIVE_SPEED},
-                        {{24_in, 24_in}, fwd, DRIVE_SPEED}},
+    // chassis.pid_turn_set(45, 100);
+
+  chassis.pid_odom_set({{{0_in, 48_in}, fwd, DRIVE_SPEED},
+                        {{-48_in, 0_in}, fwd, DRIVE_SPEED},
+                        {{0_in, 12_in}, fwd, DRIVE_SPEED}},
                        true);
   chassis.pid_wait_until_index(1);  // Waits until the robot passes 12, 24
-  // Intake.move(127);  // Set your intake to start moving once it passes through the second point in the index
+  intake.move(127);  // Set your intake to start moving once it passes through the second point in the index
   chassis.pid_wait();
-  // Intake.move(0);  // Turn the intake off
+  intake.move(0);  // Turn the intake off
 }
 ///
 // Odom Boomerang
 ///
 void odom_boomerang_example() {
-  chassis.pid_odom_set({{0_in, 24_in, 45_deg}, fwd, DRIVE_SPEED},
+  chassis.pid_odom_set({{0_in, -24_in, 45_deg}, rev, DRIVE_SPEED},
                        true);
   chassis.pid_wait();
 
-  chassis.pid_odom_set({{0_in, 0_in, 0_deg}, rev, DRIVE_SPEED},
+  chassis.pid_odom_set({{0_in, 0_in, 0_deg}, fwd, DRIVE_SPEED},
                        true);
   chassis.pid_wait();
 }
@@ -397,5 +431,139 @@ void infinity_path_example() {
     {{24_in, 0_in}, fwd, DRIVE_SPEED},
     {{12_in, 12_in}, fwd, DRIVE_SPEED}
   }, true);
-  chassis.pid_wait();
+}
+ void moveToGPSPoint(double targetX, double targetY, double tolerance) {
+    // Get current heading from GPS once at the beginning
+    double desiredHeading = gps.get_heading();
+
+    while (true) {
+        pros::gps_position_s_t gps_data = gps.get_position();
+        double x = gps_data.x * 39.3701;  // meters to inches
+        double y = gps_data.y * 39.3701;
+
+        // Skip invalid data
+        if (x == 0 && y == 0) {
+            pros::delay(100);
+            continue;
+        }
+
+        double dx = targetX - x;
+        double dy = targetY - y;
+
+        double distance = sqrt(dx * dx + dy * dy);
+        if (distance <= tolerance) break;
+
+        // Calculate direction to the point (we'll use this just for step)
+        double targetAngle = atan2(dy, dx) * 180.0 / M_PI;
+        if (targetAngle < 0) targetAngle += 360;
+
+        // Move a small step toward the point while facing original heading
+        double stepDistance = std::min(distance, 12.0); // move in small steps
+        chassis.pid_drive_set(stepDistance * 1_in, DRIVE_SPEED, true);  // true = maintain heading
+        chassis.pid_wait();
+
+        // Re-correct heading if drifted
+        double currentHeading = gps.get_heading();
+        double headingError = desiredHeading - currentHeading;
+        while (headingError > 180) headingError -= 360;
+        while (headingError < -180) headingError += 360;
+
+        if (fabs(headingError) > 3.0) {
+            chassis.pid_turn_set(desiredHeading, TURN_SPEED);
+            chassis.pid_wait();
+        }
+
+        pros::delay(50);
+    }
+
+    // Stop the robot
+    chassis.drive_brake_set(MOTOR_BRAKE_BRAKE);
+    chassis.drive_set(0, 0);
+}
+void turnToFaceGPSPoint(double targetX, double targetY) {
+   
+    // Get current GPS position and heading
+    pros::gps_position_s_t position = gps.get_position();
+    double robotX = position.x * 39.3701;  // meters to inches
+    double robotY = position.y * 39.3701;
+    double robotHeading = gps.get_heading();  // this is already in degrees (0-359)
+
+    if (robotX == 0 && robotY == 0) {
+        printf("GPS position invalid\n");
+        return;
+    }
+
+    // Calculate desired global heading to face the point
+    double dx = targetX - robotX;
+    double dy = targetY - robotY;
+    double targetHeading = atan2(dx, dy) * 180.0 / M_PI;  // Note: atan2(dx, dy) to align with field coordinates
+    if (targetHeading < 0) targetHeading += 360;
+
+    // Calculate relative turn angle
+    double turnAngle = targetHeading - robotHeading;
+    while (turnAngle > 180) turnAngle -= 360;
+    while (turnAngle <= -180) turnAngle += 360;
+
+    printf("GPS heading: %.1f°, Target: %.1f°, Turn: %.1f°\n",
+           robotHeading, targetHeading, turnAngle);
+
+    // Perform turn
+    chassis.pid_turn_relative_set(turnAngle, TURN_SPEED);
+    chassis.pid_wait();
+}
+
+void turnToAbsoluteHeading(double targetHeading) {
+//     while (true) {
+//         double currentHeading = gps.get_heading();  // in degrees
+
+//         // Validate GPS heading (skip invalid data if needed)
+//         if (std::isnan(currentHeading)) {
+//             pros::delay(100);
+//             continue;
+//         }
+
+//         // Calculate shortest angle difference [-180, 180]
+//         double angleDiff = targetHeading - currentHeading;
+//         while (angleDiff > 180) angleDiff -= 360;
+//         while (angleDiff < -180) angleDiff += 360;
+
+// while ((fabs(currentHeading - targetHeading) <= 2.0)) {
+  
+//         // Set PID turn to absolute target heading
+        // chassis.pid_turn_set(targetHeading, TURN_SPEED);
+//         chassis.pid_wait();
+
+// }
+        //  currentHeading = gps.get_heading();  // in degrees
+
+// if (fabs(currentHeading - targetHeading) <= 2.0) {
+//     break;
+// }
+
+        // // Set PID turn to absolute target heading
+        // chassis.pid_turn_set(angleDiff, TURN_SPEED);
+    //     // chassis.pid_wait();
+
+    //     pros::delay(50);  // Small delay to avoid spamming
+    // }
+   // Get current heading from GPS
+    double currentHeading = gps.get_heading();  // range: [0, 360)
+
+    // Print debug
+    std::cout << "[DEBUG] Current: " << currentHeading << " | Target: " << targetHeading << std::endl;
+
+    // Calculate shortest turn angle [-180, 180]
+    double turnAngle = targetHeading - currentHeading;
+    if (turnAngle > 180) turnAngle -= 360;
+    if (turnAngle < -180) turnAngle += 360;
+
+    std::cout << "[DEBUG] Turning by: " << turnAngle << " degrees" << std::endl;
+
+    // Execute PID turn by relative angle
+    chassis.pid_turn_set(turnAngle, TURN_SPEED);
+    chassis.pid_wait();
+
+    // Optional: final heading
+    double after = gps.get_heading();
+    std::cout << "[DEBUG] After turn: " << after << std::endl;
 }

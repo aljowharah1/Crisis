@@ -17,3 +17,6 @@ void odom_boomerang_example();
 void odom_boomerang_injected_pure_pursuit_example();
 void measure_offsets();
 void infinity_path_example();
+void moveToGPSPoint(double targetX, double targetY, double tolerance ); 
+void turnToFaceGPSPoint(double targetX, double targetY);
+void turnToAbsoluteHeading(double targetHeading);

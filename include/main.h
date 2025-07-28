@@ -62,6 +62,7 @@
 // using namespace ez;
 using namespace okapi::literals;
 extern pros::Imu imu;
+extern pros::Gps gps; 
 
 /**
  * Prototypes for the competition control tasks are redefined here to ensure

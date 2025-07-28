@@ -1,4 +1,8 @@
 #include "main.h"
+#include "autons.hpp"
+#include "pros/gps.h"
+#include "pros/gps.hpp"
+#include "pros/motors.h"
 
 /////
 // For installation, upgrading, documentations, and tutorials, check out our website!
@@ -6,16 +10,22 @@
 /////
 // pros::Gps gps_sensor(10, 0, 0, 0);  // Port, X offset, Y offset, rotation (degrees)
 pros::Imu imu(2); // Match the IMU port number you used in your chassis constructor
+pros::Gps gps(3, 0, 0); // Port 1, no offset
 
 // Chassis constructor
 ez::Drive chassis(
     // These are your drive motors, the first motor is used for sensing!
-    {-11,-12},     // Left Chassis Ports (negative port will reverse it!)
-    {17,19},  // Right Chassis Ports (negative port will reverse it!)
+    {-11,-12, -13},     // Left Chassis Ports (negative port will reverse it!)
+    {17,19,18},  // Right Chassis Ports (negative port will reverse it!)
 
     2,      // IMU Port
     3.25,  // Wheel Diameter (Remember, 4" wheels without screw holes are actually 4.125!)
-    334);   // Wheel RPM = cartridge * (motor gear / wheel gear)
+    334,
+    
+  // External gear ratio (MOTOR:WHEEL), for green cartridges it's usually 1:1
+    1.667
+     // gear ratio (e.g., 36:60 is 0.6; for 36:36 or 60:60, it's 1.0)
+   );   // Wheel RPM = cartridge * (motor gear / wheel gear)
 
 // Uncomment the trackers you're using here!
 // - `8` and `9` are smart ports (making these negative will reverse the sensor)
@@ -23,7 +33,7 @@ ez::Drive chassis(
 // - `2.75` is the wheel diameter
 // - `4.0` is the distance from the center of the wheel to the center of the robot
 // ez::tracking_wheel horiz_tracker(8, 2.75, 4.0);  // This tracking wheel is perpendicular to the drive wheels
-// ez::tracking_wheel vert_tracker(9, 2.75, 4.0);   // This tracking wheel is parallel to the drive wheels
+// e z::tracking_wheel vert_tracker(9, 2.75, 4.0);   // This tracking wheel is parallel to the drive wheels
 
 /**
  * Runs initialization code. This occurs as soon as the program is started.
@@ -55,8 +65,8 @@ void initialize() {
   default_constants();
 
   // These are already defaulted to these buttons, but you can change the left/right curve buttons here!
-  // chassis.opcontrol_curve_buttons_left_set(pros::E_CONTROLLER_DIGITAL_LEFT, pros::E_CONTROLLER_DIGITAL_RIGHT);  // If using tank, only the left side is used.
-  // chassis.opcontrol_curve_buttons_right_set(pros::E_CONTROLLER_DIGITAL_Y, pros::E_CONTROLLER_DIGITAL_A);
+  //chassis.opcontrol_curve_buttons_left_set(pros::E_CONTROLLER_DIGITAL_LEFT, pros::E_CONTROLLER_DIGITAL_RIGHT);  // If using tank, only the left side is used.
+  //chassis.opcontrol_curve_buttons_right_set(pros::E_CONTROLLER_DIGITAL_Y, pros::E_CONTROLLER_DIGITAL_A);
 
   // Autonomous Selector using LLEMU
   // ez::as::auton_selector.autons_add({
@@ -78,6 +88,10 @@ void initialize() {
 
   // Initialize chassis and auton selector
   chassis.initialize();
+  chassis.odom_enable(true);
+
+  chassis.odom_xyt_set(0_in, 0_in, 0_deg);  // Set initial pose (x=0", y=0", theta=0°)
+
   ez::as::initialize();
   master.rumble(chassis.drive_imu_calibrated() ? "." : "---");
 }
@@ -119,7 +133,7 @@ void autonomous() {
   chassis.pid_targets_reset();                // Resets PID targets to 0
   chassis.drive_imu_reset();                  // Reset gyro position to 0
   chassis.drive_sensor_reset();               // Reset drive sensors to 0
-  chassis.odom_xyt_set(0_in, 0_in, 0_deg);    // Set the current position, you can start at a specific position with this
+  // chassis.odom_xyt_set(0_in, 0_in, 0_deg);    // Set the current position, you can start at a specific position with this
   chassis.drive_brake_set(MOTOR_BRAKE_HOLD);  // Set motors to hold.  This helps autonomous consistency
 
   /*
@@ -144,12 +158,15 @@ void autonomous() {
 //  interfered_example();
 //  odom_drive_example();
 //  odom_pure_pursuit_example();
+
 //  odom_pure_pursuit_wait_until_example();
 //  odom_boomerang_example();
 //  odom_boomerang_injected_pure_pursuit_example();
 //  measure_offsets();
 //  infinity_path_example();
+ moveToGPSPoint(0, 0,0.5 ); 
   // ez::as::auton_selector.selected_auton_call();  // Calls selected auton from autonomous selector
+   
 }
 
 /**
@@ -255,96 +272,118 @@ void ez_template_extras() {
  * task, not resume it from where it left off.
  */
  
-void opcontrol() {
-  // This is preference to what you like to drive on
-  chassis.drive_brake_set(MOTOR_BRAKE_COAST);
+// void opcontrol() {
+//   // This is preference to what you like to drive on
+//   chassis.drive_brake_set(MOTOR_BRAKE_COAST);
 
-  while (true) {
-    // Gives you some extras to make EZ-Template ezier
-    // ez_template_extras();
+//   while (true) {
+//     // Gives you some extras to make EZ-Template ezier
+//     // ez_template_extras();
 
-    // chassis.opcontrol_tank();  // Tank control
-    chassis.opcontrol_arcade_standard(ez::SPLIT);   // Standard split arcade
-    // chassis.opcontrol_arcade_standard(ez::SINGLE);  // Standard single arcade
-    // chassis.opcontrol_arcade_flipped(ez::SPLIT);    // Flipped split arcade
-    // chassis.opcontrol_arcade_flipped(ez::SINGLE);   // Flipped single arcade
+//     // chassis.opcontrol_tank();  // Tank control
+//     chassis.opcontrol_arcade_standard(ez::SPLIT);   // Standard split arcade
+//     // chassis.opcontrol_arcade_standard(ez::SINGLE);  // Standard single arcade
+//     // chassis.opcontrol_arcade_flipped(ez::SPLIT);    // Flipped split arcade
+//     // chassis.opcontrol_arcade_flipped(ez::SINGLE);   // Flipped single arcade
 
-    // . . .
-    // Put more user control code here!
-    // 
+//     // . . .
+//     // Put more user control code here!
+//     // 
    
  
 
-  //       printf("IMU Heading: %.2f deg\n", chassis.o);
-  //   pros::delay(100);  // Delay to prevent spamming terminal
-  //   // // Print encoder values in both inches and degrees, and velocities (RPM)
-  //   // printf("LEFT: %.2f in | %.2f deg | %.2f RPM\n",
-  //   //        chassis.drive_sensor_left(),         // inches
-  //   //        chassis.drive_sensor_left_raw(),     // degrees
-  //   //        chassis.drive_velocity_left());      // RPM
+//   //       printf("IMU Heading: %.2f deg\n", chassis.o);
+//   //   pros::delay(100);  // Delay to prevent spamming terminal
+//   //   // // Print encoder values in both inches and degrees, and velocities (RPM)
+//   //   // printf("LEFT: %.2f in | %.2f deg | %.2f RPM\n",
+//   //   //        chassis.drive_sensor_left(),         // inches
+//   //   //        chassis.drive_sensor_left_raw(),     // degrees
+//   //   //        chassis.drive_velocity_left());      // RPM
 
-  //   // printf("RIGHT: %.2f in | %.2f deg | %.2f RPM\n",
-  //   //        chassis.drive_sensor_right(),        // inches
-  //   //        chassis.drive_sensor_right_raw(),    // degrees
-  //   //        chassis.drive_velocity_right());     // RPM
+//   //   // printf("RIGHT: %.2f in | %.2f deg | %.2f RPM\n",
+//   //   //        chassis.drive_sensor_right(),        // inches
+//   //   //        chassis.drive_sensor_right_raw(),    // degrees
+//   //   //        chassis.drive_velocity_right());     // RPM
 
-  //   // printf("--------------------------------------------------\n");
+//   //   // printf("--------------------------------------------------\n");
 
-  //   pros::delay(200);  // Adjust delay as needed for readability
+//   //   pros::delay(200);  // Adjust delay as needed for readability
 
 
-  //       pros::delay(200);
-       // Toggle the PID tuner ON/OFF when X is pressed
-    if (master.get_digital_new_press(DIGITAL_X)) {
-      chassis.pid_tuner_toggle();
-    }
+//   //       pros::delay(200);
+//        // Toggle the PID tuner ON/OFF when X is pressed
+//     if (master.get_digital_new_press(DIGITAL_X)) {
+//       chassis.pid_tuner_toggle();
+//     }
 
-    // Run the selected autonomous when B is pressed
-    if (master.get_digital_new_press(DIGITAL_B)) {
-      pros::motor_brake_mode_e_t preference = chassis.drive_brake_get();
-      // drive_example();
-      autonomous();
-      chassis.drive_brake_set(preference);
-    }  
+//     // Run the selected autonomous when B is pressed
+//     if (master.get_digital_new_press(DIGITAL_B)) {
+//       pros::motor_brake_mode_e_t preference = chassis.drive_brake_get();
+//       // drive_example();
+//       autonomous();
+//       chassis.drive_brake_set(preference);
+//     }  
 
-    // Run PID tuner if it is currently enabled
-    if (chassis.pid_tuner_enabled()) {
-      chassis.pid_tuner_full_enable(true); 
-      chassis.pid_tuner_iterate();  // This runs the menu and updates screen
-    }
-
-  // }
-    pros::delay(ez::util::DELAY_TIME);  // This is used for timer calculations!  Keep this ez::util::DELAY_TIME
-  }
-
-}
-
-// // Debug opcontrol
-// void opcontrol() {
-//   // Set brake mode
-//   chassis.drive_brake_set(MOTOR_BRAKE_COAST);
-
-//   // ---- Calibrate IMU once at the beginning ----
-//   imu.reset();  // Start calibration
-//   while (imu.is_calibrating()) {
-//     printf("Calibrating IMU...\n");
-//     pros::delay(100);
-//   }
-//   printf("IMU is ready!\n");
-
-//   // Main control loop
-//   while (true) {
-//     // Drive control
-//     chassis.opcontrol_arcade_standard(ez::SPLIT);
-
-// printf("LEFT:  %.2f in\n", chassis.drive_sensor_left());
-// printf("RIGHT: %.2f in\n", chassis.drive_sensor_right())
-
-//     // Optional: IMU values
-//     // printf("IMU Heading: %.2f deg | Rotation: %.2f deg\n",
-//     //        imu.get_heading(),
-//     //        imu.get_rotation());
-
-//     pros::delay(ez::util::DELAY_TIME);  // Use EZ-Template timing constant
-//   }
+//     // Run PID tuner if it is currently enabled
+//   if (chassis.pid_tuner_enabled()) {
+//   chassis.pid_tuner_full_enable(true); 
+//   chassis.pid_tuner_iterate();  
 // }
+// if (master.get_digital(DIGITAL_R1)) {
+//   intake.move(127);  // Spin intake forward
+// } else if (master.get_digital(DIGITAL_R2)) {
+//   intake.move(-127); // Spin intake reverse
+// } else {
+//   intake.brake();    // Or use intake.move(0);
+// }
+
+//   // }
+//     pros::delay(ez::util::DELAY_TIME);  // This is used for timer calculations!  Keep this ez::util::DELAY_TIME
+//   }
+
+// }
+
+// Debug opcontrol
+void opcontrol() {
+  // Set brake mode
+
+  while (true) {
+    // Drive control
+    chassis.opcontrol_arcade_standard(ez::SPLIT);
+   chassis.drive_brake_set(pros::E_MOTOR_BRAKE_COAST);
+
+
+
+  if (master.get_digital_new_press(DIGITAL_B)) {
+    //turnToAbsoluteHeading(0);
+    //  pros::delay(500);  // Use EZ-Template timing constant
+        // chassis.pid_turn_set(90, 100);
+
+  //turnToAbsoluteHeading(90);
+  //     pros::delay(500);  // Use EZ-Template timing constant
+
+  //  turnToAbsoluteHeading(180);
+  //      pros::delay(500);  // Use EZ-Template timing constant
+turnToFaceGPSPoint(-24,-24);
+  //  turnToAbsoluteHeading(270);
+  //   pros::delay(500);  // Use EZ-Template timing constant
+
+
+    }  
+    // // Get GPS data
+    // double gpsX = gps.get_position().x * 39.3701;       // meters -> inches
+    // double gpsY = gps.get_position().y * 39.3701;       // meters -> inches
+    // double gpsHeading = gps.get_heading();    // in degrees
+
+    // // Print to terminal
+    // printf("GPS Position -> X: %.2f in, Y: %.2f in, Heading: %.2f deg\n", gpsX, gpsY, gpsHeading);
+
+    // // Print to Brain screen (line 0, 1, 2)
+    // pros::screen::print(TEXT_MEDIUM, 0, "X: %.2f in", gpsX);
+    // pros::screen::print(TEXT_MEDIUM, 1, "Y: %.2f in", gpsY);
+    // pros::screen::print(TEXT_MEDIUM, 2, "Heading: %.2f deg", gpsHeading);
+
+
+    // pros::delay(500);  // Use EZ-Template timing constant
+  }
+}
