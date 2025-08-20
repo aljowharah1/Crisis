@@ -1,8 +1,10 @@
 #include "main.h"
+#include "EZ-Template/sdcard.hpp"
 #include "autons.hpp"
 #include "pros/gps.h"
 #include "pros/gps.hpp"
 #include "pros/motors.h"
+#include "pros/rtos.hpp"
 
 /////
 // For installation, upgrading, documentations, and tutorials, check out our website!
@@ -186,41 +188,30 @@ void screen_print_tracker(ez::tracking_wheel *tracker, std::string name, int lin
  * Ez screen task
  * Adding new pages here will let you view them during user control or autonomous
  * and will help you debug problems you're having
- */
-void ez_screen_task() {
-  while (true) {
-    // Only run this when not connected to a competition switch
-    if (!pros::competition::is_connected()) {
-      // Blank page for odom debugging
-      if (chassis.odom_enabled() && !chassis.pid_tuner_enabled()) {
-        // If we're on the first blank page...
-        if (ez::as::page_blank_is_on(0)) {
-          // Display X, Y, and Theta
-          ez::screen_print("x: " + util::to_string_with_precision(chassis.odom_x_get()) +
-                               "\ny: " + util::to_string_with_precision(chassis.odom_y_get()) +
-                               "\na: " + util::to_string_with_precision(chassis.odom_theta_get()),
-                           1);  // Don't override the top Page line
+ */void ez_screen_task() {
 
-          // Display all trackers that are being used
-          screen_print_tracker(chassis.odom_tracker_left, "l", 4);
-          screen_print_tracker(chassis.odom_tracker_right, "r", 5);
-          screen_print_tracker(chassis.odom_tracker_back, "b", 6);
-          screen_print_tracker(chassis.odom_tracker_front, "f", 7);
+    while (true) {
+        // Only run this when not connected to a competition switch
+        if (!pros::competition::is_connected()) {
+            if (chassis.odom_enabled() && !chassis.pid_tuner_enabled()) {
+                if (ez::as::page_blank_is_on(0)) {
+                    // ✅ Only show tracker information
+                    screen_print_tracker(chassis.odom_tracker_left, "l", 4);
+                    screen_print_tracker(chassis.odom_tracker_right, "r", 5);
+                    screen_print_tracker(chassis.odom_tracker_back, "b", 6);
+                    screen_print_tracker(chassis.odom_tracker_front, "f", 7);
+                }
+            }
+        } 
+        else {
+            if (ez::as::page_blank_amount() > 0)
+                ez::as::page_blank_remove_all();
         }
-      }
-    }
 
-    // Remove all blank pages when connected to a comp switch
-    else {
-      if (ez::as::page_blank_amount() > 0)
-        ez::as::page_blank_remove_all();
+        pros::delay(ez::util::DELAY_TIME);
     }
-
-    pros::delay(ez::util::DELAY_TIME);
-  }
 }
 pros::Task ezScreenTask(ez_screen_task);
-
 /**
  * Gives you some extras to run in your opcontrol:
  * - run your autonomous routine in opcontrol by pressing DOWN and B
@@ -347,7 +338,10 @@ void ez_template_extras() {
 void opcontrol() {
   // Set brake mode
 
+
   while (true) {
+   
+
     // Drive control
     chassis.opcontrol_arcade_standard(ez::SPLIT);
    chassis.drive_brake_set(pros::E_MOTOR_BRAKE_COAST);
@@ -364,7 +358,14 @@ void opcontrol() {
 
   //  turnToAbsoluteHeading(180);
   //      pros::delay(500);  // Use EZ-Template timing constant
-turnToFaceGPSPoint(-24,-24);
+// turnToFaceGPSPoint(-24,-24);
+// turnToFaceGPSPoint(0,0);
+//turnToFaceOppGPSPoint(0,0);
+// chassis.pid_turn_set(90,100);
+// pros::delay(100);
+moveToGPSPoint(0, 0, 5);
+
+
   //  turnToAbsoluteHeading(270);
   //   pros::delay(500);  // Use EZ-Template timing constant
 
@@ -384,6 +385,5 @@ turnToFaceGPSPoint(-24,-24);
     // pros::screen::print(TEXT_MEDIUM, 2, "Heading: %.2f deg", gpsHeading);
 
 
-    // pros::delay(500);  // Use EZ-Template timing constant
   }
 }

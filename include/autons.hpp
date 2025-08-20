@@ -20,3 +20,4 @@ void infinity_path_example();
 void moveToGPSPoint(double targetX, double targetY, double tolerance ); 
 void turnToFaceGPSPoint(double targetX, double targetY);
 void turnToAbsoluteHeading(double targetHeading);
+void turnToFaceOppGPSPoint(double targetX, double targetY);
