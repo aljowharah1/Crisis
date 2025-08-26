@@ -1,5 +1,7 @@
+#include <cmath>
 #include "main.h"
 #include "pros/gps.h"
+#include "pros/rtos.hpp"
 #include "subsystems.hpp"
 
 /////
@@ -71,8 +73,8 @@ void drive_example() {
   // chassis.pid_wait();f
 
 
-  // chassis.pid_drive_set(-12_in, DRIVE_SPEED);
-  // chassis.pid_wait();
+  chassis.pid_drive_set(-12_in, DRIVE_SPEED);
+  chassis.pid_wait();
 }
 
 ///
@@ -432,56 +434,192 @@ void infinity_path_example() {
     {{12_in, 12_in}, fwd, DRIVE_SPEED}
   }, true);
 }
- void moveToGPSPoint(double targetX, double targetY, double tolerance) {
-    // Get current heading from GPS once at the beginning
-    double desiredHeading = gps.get_heading();
-    turnToFaceOppGPSPoint(targetX,targetY);
+
+// void moveToGPSPoint(double targetX, double targetY, double tolerance) {
+//        // Get initial GPS position
+//     pros::gps_position_s_t start_data = gps.get_position();
+//     double startX = start_data.x * 39.3701;  
+//     double startY = start_data.y * 39.3701;
+
+//     double totalDistance = sqrt((targetX - startX) * (targetX - startX) + 
+//                                 (targetY - startY) * (targetY - startY));
+//     printf("[DEBUG] Total distance to travel: %.2f inches\n", totalDistance);
+
+//     // Turn to face the target first
+//     turnToFaceOppGPSPoint(targetX, targetY);
+//     pros::delay(100);
+
+//     while (true) {
+//         // Get GPS position
+//         pros::gps_position_s_t gps_data = gps.get_position();
+//         double x = gps_data.x * 39.3701;
+//         double y = gps_data.y * 39.3701;
+
+//         // Skip invalid GPS readings
+//         if (x == 0 && y == 0) {
+//             printf("[DEBUG] Invalid GPS reading, skipping...\n");
+//             pros::delay(50);
+//             continue;
+//         }
+
+//         // Delta to target
+//         double dx = targetX - x;
+//         double dy = targetY - y;
+//         double distance = sqrt(dx*dx + dy*dy);
+
+//         // Compute dynamic step size
+//         double stepDistance = 12.0; // default far distance
+//         if (distance < 6.0) stepDistance = 2.0;   // close radius
+//         else if (distance < 12.0) stepDistance = 6.0; // medium radius
+
+//         // Check if both X and Y are within tolerance
+//         if (fabs(dx) <= tolerance && fabs(dy) <= tolerance) {
+//             printf("[DEBUG] Target reached within tolerance (X: %.2f, Y: %.2f)\n", dx, dy);
+//             break;
+//         }
+
+//         // Compute desired IMU heading from GPS (back-mounted offset)
+//         double targetHeading = atan2(dx, dy) * 180.0 / M_PI + 180.0;
+//         if (targetHeading < 0) targetHeading += 360;
+
+//         double imuHeading = chassis.drive_imu_get();
+//         double headingError = targetHeading - imuHeading;
+//         while (headingError > 180) headingError -= 360;
+//         while (headingError < -180) headingError += 360;
+
+//         // Limit turn per step
+//         if (fabs(headingError) > 2.0) {
+//             if (headingError > 15.0) headingError = 15.0;
+//             if (headingError < -15.0) headingError = -15.0;
+//             printf("[DEBUG] Turning %.2f degrees toward target.\n", headingError);
+//             chassis.pid_turn_set(headingError, TURN_SPEED);
+//             chassis.pid_wait();
+//         }
+
+//         // Move step toward target
+//         printf("[DEBUG] Moving %.2f inches toward target.\n", stepDistance);
+//         chassis.pid_drive_set(stepDistance * 1_in, DRIVE_SPEED, true); // maintain heading
+//         chassis.pid_wait();
+
+//         pros::delay(50);
+//     }
+
+//     // Stop the robot
+//     printf("[DEBUG] Stopping robot.\n");
+//     chassis.drive_brake_set(MOTOR_BRAKE_BRAKE);
+//     chassis.drive_set(0, 0);
+// }
 
 
+
+void turnToFaceOppGPSPoint(double targetX, double targetY) {
+    // Get current GPS position and heading 
+    pros::gps_position_s_t position = gps.get_position();
+    double robotX = position.x * 39.3701;  // meters to inches
+    double robotY = position.y * 39.3701;
+    double robotHeading = gps.get_heading();  // already in degrees (0-359)
+
+    // Debug output for invalid position
+    if (robotX == 0 && robotY == 0) {
+        printf("[ERROR] GPS position invalid (0,0)\n");
+        pros::lcd::print(0, "GPS invalid");
+        return;
+    }
+    // Calculate desired global heading to face the point
+    double dx = targetX - robotX;
+    double dy = targetY - robotY;
+    double targetHeading =( atan2(dx, dy) * 180.0 / M_PI)+180;
+    if (targetHeading < 0) targetHeading += 360;
+
+    // Calculate CW and CCW errors
+    double cwError  = fmod((targetHeading - robotHeading + 360), 360); // CW turn (0–359)
+    double ccwError = cwError - 360;                                   // CCW turn (-359–0)
+
+    // Choose the shorter turn
+    double turnAngle = (fabs(cwError) <= fabs(ccwError)) ? cwError : ccwError;
+
+    // Debug prints
+    printf("[DEBUG] Robot: (%.1f, %.1f) Heading: %.1f°\n", robotX, robotY, robotHeading);
+    printf("[DEBUG] Target: (%.1f, %.1f) Target Heading: %.1f°\n", targetX, targetY, targetHeading);
+    printf("[DEBUG] CW Error: %.1f°, CCW Error: %.1f°, Chosen Turn: %.1f°\n", cwError, ccwError, turnAngle);
+
+    // Brain screen output
+    pros::lcd::print(0, "Robot: X=%.1f Y=%.1f", robotX, robotY);
+    pros::lcd::print(1, "Target: X=%.1f Y=%.1f", targetX, targetY);
+    pros::lcd::print(2, "Head=%.1f Target=%.1f", robotHeading, targetHeading);
+    pros::lcd::print(3, "CW=%.1f CCW=%.1f", cwError, ccwError);
+    pros::lcd::print(4, "Turn=%.1f", turnAngle);
+    chassis.drive_imu_reset();   
+
+    // Perform turn
+    chassis.pid_turn_set(turnAngle , TURN_SPEED);
+    chassis.pid_wait();
+    chassis.drive_imu_reset();   
+    robotX = position.x * 39.3701;  // meters to inches
+    robotY = position.y * 39.3701;
+    robotHeading = gps.get_heading();  // already in degrees (0-359)
+
+}
+
+//  double moveToGPSPoint(double targetX, double targetY, double tolerance) {
+
+//         pros::gps_position_s_t gps_data = gps.get_position();
+//             // chassis.drive_imu_reset();
+
+//         double x = gps_data.x * 39.3701;  // meters → inches
+//         double y = gps_data.y * 39.3701;
+
+//         double dx = targetX - x;
+//         double dy = targetY - y;
+//         double distance = sqrt(dx*dx + dy*dy);
+
+//         // chassis.pid_drive_set(distance * 1_in, DRIVE_SPEED, true);  // maintain heading
+//         // chassis.pid_wait();  
+//         return distance;
+
+//}
+void moveToGPSPoint(double targetX, double targetY) {
     while (true) {
-        pros::gps_position_s_t gps_data = gps.get_position();
-        double x = gps_data.x * 39.3701;  // meters to inches
-        double y = gps_data.y * 39.3701;
+        // Get current GPS position
+        auto pos = gps.get_position();
+        double x = pos.x * 39.3701;
+        double y = pos.y * 39.3701;
 
-        // Skip invalid data
-        if (x == 0 && y == 0) {
-            pros::delay(100);
-            continue;
-        }
+        // Skip invalid readings
+        if (x == 0 && y == 0) { pros::delay(50); continue; }
 
+        // Compute distance to target
         double dx = targetX - x;
         double dy = targetY - y;
-
-        double distance = sqrt(dx * dx + dy * dy);
+        double distance = sqrt(dx*dx + dy*dy);
+        double tolerance = 3.0;
+        // Stop if within tolerance
         if (distance <= tolerance) break;
 
-        // Calculate direction to the point (we'll use this just for step)
-        double targetAngle = atan2(dy, dx) * 180.0 / M_PI;
-        if (targetAngle < 0) targetAngle += 360;
+        // Turn to face target
+        turnToFaceOppGPSPoint(targetX, targetY);
+        pros::delay(50);
 
-        // Move a small step toward the point while facing original heading
-        double stepDistance = std::min(distance, 12.0); // move in small steps
-        chassis.pid_drive_set(stepDistance * 1_in, DRIVE_SPEED, true);  // true = maintain heading
+        // Lock current heading before driving
+        double imuHeading = chassis.drive_imu_get();
+        chassis.drive_angle_set(imuHeading);
+
+        // Determine step size
+        double stepDistance = (distance > 12.0) ? 12.0 : (distance > 4.0 ? 4.0 : distance);
+
+        // Move step forward
+        chassis.pid_drive_set(stepDistance * 1_in, DRIVE_SPEED, false); // no heading correction
         chassis.pid_wait();
 
-        // // Re-correct heading if drifted
-        // double currentHeading = gps.get_heading();
-        // double headingError = desiredHeading - currentHeading;
-        // while (headingError > 180) headingError -= 360;
-        // while (headingError < -180) headingError += 360;
-
-        // if (fabs(headingError) > 3.0) {
-        //     chassis.pid_turn_set(desiredHeading, TURN_SPEED);
-        //     chassis.pid_wait();
-        // }
-
-        pros::delay(50);
+        pros::delay(20);  // allow GPS to update
     }
 
-    // Stop the robot
-    chassis.drive_brake_set(MOTOR_BRAKE_BRAKE);
+    // Stop robot
     chassis.drive_set(0, 0);
+    chassis.drive_brake_set(MOTOR_BRAKE_BRAKE);
 }
+
+
 void turnToFaceGPSPoint(double targetX, double targetY) {
     // Get current GPS position and heading 
     pros::gps_position_s_t position = gps.get_position();
@@ -560,61 +698,6 @@ void turnToFaceGPSPoint(double targetX, double targetY) {
 // chassis.pid_turn_set(currentIMU + turnAngle, TURN_SPEED);
 // chassis.pid_wait();
 }
-
-
-
-
-void turnToFaceOppGPSPoint(double targetX, double targetY) {
-    // Get current GPS position and heading 
-    pros::gps_position_s_t position = gps.get_position();
-    double robotX = position.x * 39.3701;  // meters to inches
-    double robotY = position.y * 39.3701;
-    double robotHeading = gps.get_heading();  // already in degrees (0-359)
-
-    // Debug output for invalid position
-    if (robotX == 0 && robotY == 0) {
-        printf("[ERROR] GPS position invalid (0,0)\n");
-        pros::lcd::print(0, "GPS invalid");
-        return;
-    }
-    // Calculate desired global heading to face the point
-    double dx = targetX - robotX;
-    double dy = targetY - robotY;
-    double targetHeading =( atan2(dx, dy) * 180.0 / M_PI)+180;
-    if (targetHeading < 0) targetHeading += 360;
-
-    // Calculate CW and CCW errors
-    double cwError  = fmod((targetHeading - robotHeading + 360), 360); // CW turn (0–359)
-    double ccwError = cwError - 360;                                   // CCW turn (-359–0)
-
-    // Choose the shorter turn
-    double turnAngle = (fabs(cwError) <= fabs(ccwError)) ? cwError : ccwError;
-
-    // Debug prints
-    printf("[DEBUG] Robot: (%.1f, %.1f) Heading: %.1f°\n", robotX, robotY, robotHeading);
-    printf("[DEBUG] Target: (%.1f, %.1f) Target Heading: %.1f°\n", targetX, targetY, targetHeading);
-    printf("[DEBUG] CW Error: %.1f°, CCW Error: %.1f°, Chosen Turn: %.1f°\n", cwError, ccwError, turnAngle);
-
-    // Brain screen output
-    pros::lcd::print(0, "Robot: X=%.1f Y=%.1f", robotX, robotY);
-    pros::lcd::print(1, "Target: X=%.1f Y=%.1f", targetX, targetY);
-    pros::lcd::print(2, "Head=%.1f Target=%.1f", robotHeading, targetHeading);
-    pros::lcd::print(3, "CW=%.1f CCW=%.1f", cwError, ccwError);
-    pros::lcd::print(4, "Turn=%.1f", turnAngle);
-    chassis.drive_imu_reset();   
-
-    // Perform turn
-    chassis.pid_turn_set(turnAngle , TURN_SPEED);
-    chassis.pid_wait();
-    chassis.drive_imu_reset();   
-    robotX = position.x * 39.3701;  // meters to inches
-    robotY = position.y * 39.3701;
-    robotHeading = gps.get_heading();  // already in degrees (0-359)
-
-}
-
-
-
 
 
 

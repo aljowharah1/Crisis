@@ -166,7 +166,6 @@ void autonomous() {
 //  odom_boomerang_injected_pure_pursuit_example();
 //  measure_offsets();
 //  infinity_path_example();
- moveToGPSPoint(0, 0,0.5 ); 
   // ez::as::auton_selector.selected_auton_call();  // Calls selected auton from autonomous selector
    
 }
@@ -352,8 +351,8 @@ void opcontrol() {
     //turnToAbsoluteHeading(0);
     //  pros::delay(500);  // Use EZ-Template timing constant
         // chassis.pid_turn_set(90, 100);
-
-  //turnToAbsoluteHeading(90);
+     //drive_example();
+    //turnToAbsoluteHeading(90);
   //     pros::delay(500);  // Use EZ-Template timing constant
 
   //  turnToAbsoluteHeading(180);
@@ -363,9 +362,17 @@ void opcontrol() {
 //turnToFaceOppGPSPoint(0,0);
 // chassis.pid_turn_set(90,100);
 // pros::delay(100);
-moveToGPSPoint(0, 0, 5);
+// turnToFaceOppGPSPoint(0, 0);
+// double distance = moveToGPSPoint(0, 0, 2);
+ moveToGPSPoint(0, 0);
 
+// // Reset PID heading to current IMU
+// double imuHeading = chassis.drive_imu_get();
+// chassis.drive_angle_set(imuHeading);  // set PID target to current heading
 
+// // Drive straight without further heading correction
+// chassis.pid_drive_set(distance * 1_in, 80, false);  
+// chassis.pid_wait();
   //  turnToAbsoluteHeading(270);
   //   pros::delay(500);  // Use EZ-Template timing constant
 
