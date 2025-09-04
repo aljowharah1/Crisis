@@ -4,27 +4,15 @@
 #include "pros/rtos.hpp"
 #include "subsystems.hpp"
 
-/////
-// For installation, upgrading, documentations, and tutorials, check out our website!
-// https://ez-robotics.github.io/EZ-Template/
-/////
-
 // These are out of 127
 const int DRIVE_SPEED = 127;
 const int TURN_SPEED = 100;
 const int SWING_SPEED = 127;
 
-///
-// Constants
-///
 void default_constants() {
   // P, I, D, and Start I
-  // chassis.pid_drive_constants_set(20.0, 0.0, 100.0);         // Fwd/rev constants, used for odom and non odom motions
   chassis.pid_drive_constants_set(12.0, 0.0, 5.0);         // Fwd/rev constants, used for odom and non odom motions
-
-  // chassis.pid_heading_constants_set(11.0, 0.0, 20.0);        // Holds the robot straight while going forward without odom
   chassis.pid_heading_constants_set(10.5, 0.0, 9.50);        // Holds the robot straight while going forward without odom
-
   chassis.pid_turn_constants_set(3.0, 0.05, 5.0, 15.0);     // Turn in place constants
   chassis.pid_swing_constants_set(6.0, 0.0, 65.0);           // Swing constants
   chassis.pid_odom_angular_constants_set(6.5, 0.0, 52.5);    // Angular control for odom motions
@@ -44,7 +32,7 @@ void default_constants() {
   chassis.slew_turn_constants_set(3_deg, 70);
   chassis.slew_drive_constants_set(3_in, 70);
   chassis.slew_swing_constants_set(3_in, 80);
-
+  
   // The amount that turns are prioritized over driving in odom motions
   // - if you have tracking wheels, you can run this higher.  1.0 is the max
   chassis.odom_turn_bias_set(0.9);
@@ -56,48 +44,24 @@ void default_constants() {
   chassis.pid_angle_behavior_set(ez::shortest);  // Changes the default behavior for turning, this defaults it to the shortest path there
 }
 
-///
-// Drive Example
-///
+
 void drive_example() {
-  // The first parameter is target inches
-  // The second parameter is max speed the robot will drive at
-  // The third parameter is a boolean (true or false) for enabling/disabling a slew at the start of drive motions
+
+  chassis.pid_drive_set(24_in, 127, false);  // The first parameter is target inches , second  is max speed the robot will drive at, third is a boolean (true or false) for enabling/disabling a slew at the start of drive motions
   // for slew, only enable it when the drive distance is greater than the slew distance + a few inches
-  // chassis.pid_heading_constants_set(0.0, 0.0, 0.0);  // Disables the correction
-
-  chassis.pid_drive_set(24_in, 127, false);
   chassis.pid_wait();
-
-  // chassis.pid_drive_set(-24_in, 127);
-  // chassis.pid_wait();f
-
-
   chassis.pid_drive_set(-12_in, DRIVE_SPEED);
   chassis.pid_wait();
 }
 
-///
-// Turn Example
-///
+
 void turn_example() {
-  // The first parameter is the target in degrees
-  // The second parameter is max speed the robot will drive at
 
-  chassis.pid_turn_set(90, TURN_SPEED);
+  chassis.pid_turn_set(90, TURN_SPEED);// The first parameter is the target in degrees ,second parameter is max speed the robot will drive at
   chassis.pid_wait();
-
-  // chassis.pid_turn_set(45_deg, TURN_SPEED);
-  // chassis.pid_wait();
-
-  // chassis.pid_turn_set(0_deg, TURN_SPEED);
-  // chassis.pid_wait();
-  
 }
 
-///
-// Combining Turn + Drive
-///
+
 void drive_and_turn() {
   chassis.pid_drive_set(24_in, DRIVE_SPEED, true);
   chassis.pid_wait();
@@ -115,26 +79,15 @@ void drive_and_turn() {
   chassis.pid_wait();
 }
 
-///
-// Wait Until and Changing Max Speed
-///
+
 void wait_until_change_speed() {
   // pid_wait_until will wait until the robot gets to a desired position
-
   // When the robot gets to 6 inches slowly, the robot will travel the remaining distance at full speed
   chassis.pid_drive_set(24_in, 30, true);
   chassis.pid_wait_until(6_in);
   chassis.pid_speed_max_set(DRIVE_SPEED);  // After driving 6 inches at 30 speed, the robot will go the remaining distance at DRIVE_SPEED
   chassis.pid_wait();
 
-  chassis.pid_turn_set(45_deg, TURN_SPEED);
-  chassis.pid_wait();
-
-  chassis.pid_turn_set(-45_deg, TURN_SPEED);
-  chassis.pid_wait();
-
-  chassis.pid_turn_set(0_deg, TURN_SPEED);
-  chassis.pid_wait();
 
   // When the robot gets to -6 inches slowly, the robot will travel the remaining distance at full speed
   chassis.pid_drive_set(-24_in, 30, true);
@@ -143,78 +96,56 @@ void wait_until_change_speed() {
   chassis.pid_wait();
 }
 
-///
-// Swing Example
-///
 void swing_example() {
   // The first parameter is ez::LEFT_SWING or ez::RIGHT_SWING
   // The second parameter is the target in degrees
   // The third parameter is the speed of the moving side of the drive
   // The fourth parameter is the speed of the still side of the drive, this allows for wider arcs
-
   chassis.pid_swing_set(ez::LEFT_SWING, 90_deg, SWING_SPEED, 45);
   chassis.pid_wait();
-
   chassis.pid_swing_set(ez::RIGHT_SWING, 0_deg, SWING_SPEED, 45);
   chassis.pid_wait();
-
   chassis.pid_swing_set(ez::RIGHT_SWING, 90_deg, SWING_SPEED, 45);
   chassis.pid_wait();
-
   chassis.pid_swing_set(ez::LEFT_SWING, 0_deg, SWING_SPEED, 45);
   chassis.pid_wait();
 }
 
-///
-// Motion Chaining
-///
 void motion_chaining() {
   // Motion chaining is where motions all try to blend together instead of individual movements.
   // This works by exiting while the robot is still moving a little bit.
   // To use this, replace pid_wait with pid_wait_quick_chain.ظظظ
   chassis.pid_drive_set(24_in, DRIVE_SPEED, true);
   chassis.pid_wait();
-
   chassis.pid_turn_set(45_deg, TURN_SPEED);
   chassis.pid_wait_quick_chain();
-
   chassis.pid_turn_set(-45_deg, TURN_SPEED);
   chassis.pid_wait_quick_chain();
-
   chassis.pid_turn_set(0_deg, TURN_SPEED);
   chassis.pid_wait();
-
   // Your final motion should still be a normal pid_wait
   chassis.pid_drive_set(-24_in, DRIVE_SPEED, true);
   chassis.pid_wait();
 }
 
-///
-// Auto that tests everything
-///
 void combining_movements() {
   // chassis.pid_drive_set(24_in, DRIVE_SPEED, true);
   // chassis.pid_wait();
-
   // chassis.pid_turn_set(45_deg, TURN_SPEED);
   // chassis.pid_wait();
-
   // chassis.pid_swing_set(ez::RIGHT_SWING, -45_deg, SWING_SPEED, 45);
   // chassis.pid_wait();
-
   // chassis.pid_turn_set(0_deg, TURN_SPEED);
   // chassis.pid_wait();
-
   // chassis.pid_drive_set(-24_in, DRIVE_SPEED, true);
   // chassis.pid_wait();
-    const double side_length = 24.0; // in inches
-   double turn_angle = 90.0;  // degrees (right turn)
-
+  const double side_length = 24.0; // in inches
+  double turn_angle = 90.0;  // degrees (right turn)
+  
   for (int i = 0; i < 4; i++) {
     // Drive forward one side of the square
     chassis.pid_drive_set(side_length * 1_in, DRIVE_SPEED, true);
     chassis.pid_wait();
-
     // Turn 90 degrees clockwise
     chassis.pid_turn_set(turn_angle * 1_deg , TURN_SPEED);
     chassis.pid_wait();
@@ -263,9 +194,7 @@ void interfered_example() {
 
 }
 
-///
-// Odom Drive PID
-///
+
 void odom_drive_example() {
   // This works the same as pid_drive_set, but it uses odom instead!
   // You can replace pid_drive_set with pid_odom_set and your robot will
@@ -273,10 +202,8 @@ void odom_drive_example() {
 
   chassis.pid_odom_set(24_in, DRIVE_SPEED, true);
   chassis.pid_wait();
-
   // chassis.pid_odom_set(-12_in, DRIVE_SPEED);
   // chassis.pid_wait();
-
   // chassis.pid_odom_set(-12_in, DRIVE_SPEED);
   // chassis.pid_wait();
 }
@@ -796,4 +723,5 @@ void gps_pid_turn(double targetAngle, double kP = 1.5, double kI = 0.0, double k
     // Stop motors after turn
         chassis.drive_set(0,0);
   
+
 }
